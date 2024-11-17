@@ -1,0 +1,29 @@
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Unreal Engine
+Saved/
+Intermediate/
+DerivedDataCache/
+Build/
+
+# Plugins générés
+*.uplugin
+*.upluginmodules
+
+# Fichiers Visual Studio
+.vscode/
+.vs/
+*.VC.db
+*.VC.VC.opendb
+*.suo
+*.user
+*.xcodeproj
+
+# Backup
+Backup/
+*.bak
+
+# Logs
+*.log
