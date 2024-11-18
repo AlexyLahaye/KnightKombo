@@ -10,8 +10,16 @@ class KNIGHTKOMBO_API AMainGameMode : public AGameModeBase
 	GENERATED_BODY()
 
 public:
+	AMainGameMode();
+
+	// Override BeginPlay
 	virtual void BeginPlay() override;
 
 private:
 	void SetupPlayerCamera();
+	void SetupPlayerCharacter();
+
+	// Stocker le chemin du Blueprint du personnage
+	UPROPERTY()
+	TSubclassOf<APawn> PlayerCharacterClass;
 };

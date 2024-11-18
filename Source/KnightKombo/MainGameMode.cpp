@@ -2,17 +2,35 @@
 #include "CineCameraActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/Pawn.h"
+#include "UObject/ConstructorHelpers.h"
+
+AMainGameMode::AMainGameMode()
+{
+	// Charger le Blueprint du personnage joueur
+	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/Blueprints/BP_PlayerCharactere"));
+	if (PlayerPawnBPClass.Class != nullptr)
+	{
+		DefaultPawnClass = PlayerPawnBPClass.Class;
+		PlayerCharacterClass = PlayerPawnBPClass.Class;
+		UE_LOG(LogTemp, Log, TEXT("PlayerCharacter set successfully to BP_PlayerCharacter."));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Could not find BP_PlayerCharacter at the specified path."));
+	}
+}
 
 void AMainGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
 	SetupPlayerCamera();
+	SetupPlayerCharacter();
 }
 
 void AMainGameMode::SetupPlayerCamera()
 {
-	// Récupérer le PlayerController
 	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
 	if (!PlayerController)
 	{
@@ -20,7 +38,6 @@ void AMainGameMode::SetupPlayerCamera()
 		return;
 	}
 
-	// Trouver la caméra avec le tag "MainCamera"
 	TArray<AActor*> FoundActors;
 	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("MainCamera"), FoundActors);
 
@@ -30,7 +47,6 @@ void AMainGameMode::SetupPlayerCamera()
 		return;
 	}
 
-	// Utiliser le premier acteur trouvé
 	ACineCameraActor* MainCamera = Cast<ACineCameraActor>(FoundActors[0]);
 	if (!MainCamera)
 	{
@@ -38,6 +54,14 @@ void AMainGameMode::SetupPlayerCamera()
 		return;
 	}
 
-	// Définir la caméra comme vue principale
 	PlayerController->SetViewTarget(MainCamera);
+}
+
+void AMainGameMode::SetupPlayerCharacter()
+{
+	// Cette fonction pourrait contenir d'autres configurations spécifiques au personnage
+	if (!DefaultPawnClass)
+	{
+		UE_LOG(LogTemp, Error, TEXT("DefaultPawnClass is not set!"));
+	}
 }
