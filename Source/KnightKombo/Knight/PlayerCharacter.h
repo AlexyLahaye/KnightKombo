@@ -25,11 +25,29 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Animations")
 	class UPaperFlipbook* IdleAnimation;
 
+	// Map pour les animations d'attaque (clé : couleur, valeur : animation)
 	UPROPERTY(EditAnywhere, Category = "Animations")
-	class UPaperFlipbook* UpAttackAnimation;
+	TMap<FString, UPaperFlipbook*> AttackAnimations;
 
-	// Gestion de l'animation en cours
-	void PlayUpAttackAnimation();
+	// Buffer pour stocker les entrées utilisateur
+	TArray<FString> InputBuffer;
+
+	// Taille maximale du buffer
+	const int32 MaxBufferSize = 2;
+
+	// Fonctions pour gérer les entrées
+	void HandleUpInput();
+	void HandleDownInput();
+	void HandleRightInput();
+	void HandleLeftInput();
+	void HandleComboInput(const FString& Input);
+
+	// Vérifie les combos et joue l'animation correspondante
+	void CheckCombo();
+
+	// Joue une animation d'attaque en fonction du nom (clé dans AttackAnimations)
+	void PlayAttackAnimation(const FString& AttackName);
+
+	// Retourne à l'animation Idle après une attaque
 	void OnAnimationFinished();
-	void HandleSpaceBar();
 };

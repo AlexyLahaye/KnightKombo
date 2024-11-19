@@ -4,70 +4,86 @@
 #include "GameFramework/PlayerController.h"
 #include "TimerManager.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Kismet/KismetSystemLibrary.h"
 
 APlayerCharacter::APlayerCharacter()
 {
+    FlipbookComponent = GetSprite();
+    IdleAnimation = nullptr;
 
-	// Configuration des paramètres de saut (optionnel)
-	GetCharacterMovement()->JumpZVelocity = 600.f; // Hauteur du saut
-	GetCharacterMovement()->AirControl = 0.2f;     // Contrôle en l'air
-	
-	// Configuration du FlipbookComponent
-	FlipbookComponent = GetSprite();
+    // Charger IdleAnimation
+    static ConstructorHelpers::FObjectFinder<UPaperFlipbook> IdleAnimationAsset(TEXT("/Game/Sprite/Knight/idle/FB_Warrior_Sheet-Idle.FB_Warrior_Sheet-Idle"));
+    if (IdleAnimationAsset.Succeeded()) IdleAnimation = IdleAnimationAsset.Object;
 
-	// Initialisation des animations à NULL
-	IdleAnimation = nullptr;
-	UpAttackAnimation = nullptr;
+    // Charger les animations d'attaque
+    static ConstructorHelpers::FObjectFinder<UPaperFlipbook> RedAttack(TEXT("/Game/Sprite/Knight/RedA/FB_RedA.FB_RedA"));
+    static ConstructorHelpers::FObjectFinder<UPaperFlipbook> BlueAttack(TEXT("/Game/Sprite/Knight/BlueA/FB_BlueA.FB_BlueA"));
+    static ConstructorHelpers::FObjectFinder<UPaperFlipbook> YellowAttack(TEXT("/Game/Sprite/Knight/YellowA/FB_YellowA.FB_YellowA"));
+    static ConstructorHelpers::FObjectFinder<UPaperFlipbook> PurpleAttack(TEXT("/Game/Sprite/Knight/PurpleA/FB_PurpleA.FB_PurpleA"));
+
+    if (RedAttack.Succeeded()) AttackAnimations.Add("Red", RedAttack.Object);
+    if (BlueAttack.Succeeded()) AttackAnimations.Add("Blue", BlueAttack.Object);
+    if (YellowAttack.Succeeded()) AttackAnimations.Add("Yellow", YellowAttack.Object);
+    if (PurpleAttack.Succeeded()) AttackAnimations.Add("Purple", PurpleAttack.Object);
 }
 
 void APlayerCharacter::BeginPlay()
 {
-	Super::BeginPlay();
-
-	// Charger l'animation Idle au démarrage
-	if (IdleAnimation)
-	{
-		FlipbookComponent->SetFlipbook(IdleAnimation);
-	}
+    Super::BeginPlay();
+    if (IdleAnimation) FlipbookComponent->SetFlipbook(IdleAnimation);
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-	// Associer la barre espace à la fonction HandleSpaceBar
-	// Associer la barre espace à la fonctionnalité de saut
-	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
-	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
-	
-	// Lier l'entrée de la flèche haut à l'attaque vers le haut
-	PlayerInputComponent->BindAction("UpAttack", IE_Pressed, this, &APlayerCharacter::PlayUpAttackAnimation);
+    Super::SetupPlayerInputComponent(PlayerInputComponent);
+    PlayerInputComponent->BindAction("UpAttack", IE_Pressed, this, &APlayerCharacter::HandleUpInput);
+    PlayerInputComponent->BindAction("DownAttack", IE_Pressed, this, &APlayerCharacter::HandleDownInput);
+    PlayerInputComponent->BindAction("RightAttack", IE_Pressed, this, &APlayerCharacter::HandleRightInput);
+    PlayerInputComponent->BindAction("LeftAttack", IE_Pressed, this, &APlayerCharacter::HandleLeftInput);
 }
 
-void APlayerCharacter::PlayUpAttackAnimation()
+void APlayerCharacter::HandleComboInput(const FString& Input)
 {
-	if (UpAttackAnimation)
-	{
-		// Change l'animation en cours
-		FlipbookComponent->SetFlipbook(UpAttackAnimation);
-
-		// Récupérer la durée de l'animation
-		const float AnimationDuration = UpAttackAnimation->GetTotalDuration();  // Utilisation correcte de la durée de l'animation
-
-		// Lancer un timer pour revenir à l'animation Idle après la fin de l'animation
-		GetWorldTimerManager().SetTimerForNextTick([this, AnimationDuration]() {
-			FTimerHandle TimerHandle;
-			GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &APlayerCharacter::OnAnimationFinished, AnimationDuration, false);
-		});
-	}
+    InputBuffer.Add(Input);
+    if (InputBuffer.Num() > 2) InputBuffer.RemoveAt(0);
+    CheckCombo();
 }
 
+void APlayerCharacter::CheckCombo()
+{
+    if (InputBuffer.Num() < 2) return;
+
+    FString Combo = InputBuffer[0] + InputBuffer[1];
+    if (Combo == "UpRight" || Combo == "RightUp") PlayAttackAnimation("Purple");
+    else if (InputBuffer[0] == "Up") PlayAttackAnimation("Red");
+    else if (InputBuffer[0] == "Right") PlayAttackAnimation("Blue");
+    else if (InputBuffer[0] == "Left") PlayAttackAnimation("Yellow");
+
+    InputBuffer.Empty(); // Réinitialiser après un combo
+}
+
+void APlayerCharacter::PlayAttackAnimation(const FString& AttackName)
+{
+    if (AttackAnimations.Contains(AttackName))
+    {
+        UPaperFlipbook* SelectedAnimation = AttackAnimations[AttackName];
+        if (SelectedAnimation)
+        {
+            FlipbookComponent->SetFlipbook(SelectedAnimation);
+            const float Duration = SelectedAnimation->GetTotalDuration();
+            GetWorldTimerManager().SetTimerForNextTick([this, Duration]() {
+                FTimerHandle TimerHandle;
+                GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &APlayerCharacter::OnAnimationFinished, Duration, false);
+            });
+        }
+    }
+}
 
 void APlayerCharacter::OnAnimationFinished()
 {
-	if (IdleAnimation)
-	{
-		FlipbookComponent->SetFlipbook(IdleAnimation);
-	}
+    if (IdleAnimation) FlipbookComponent->SetFlipbook(IdleAnimation);
 }
+
+void APlayerCharacter::HandleUpInput() { HandleComboInput("Up"); }
+void APlayerCharacter::HandleDownInput() { HandleComboInput("Down"); }
+void APlayerCharacter::HandleRightInput() { HandleComboInput("Right"); }
+void APlayerCharacter::HandleLeftInput() { HandleComboInput("Left"); }
