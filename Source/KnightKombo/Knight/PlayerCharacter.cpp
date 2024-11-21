@@ -1,9 +1,9 @@
 ﻿#include "PlayerCharacter.h"
 #include "PaperFlipbookComponent.h"
 #include "PaperFlipbook.h"
-#include "GameFramework/PlayerController.h"
+#include "Blueprint/UserWidget.h"
 #include "TimerManager.h"
-#include "GameFramework/CharacterMovementComponent.h"
+#include "KnightKombo/MainGameMode.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -19,17 +19,38 @@ APlayerCharacter::APlayerCharacter()
     static ConstructorHelpers::FObjectFinder<UPaperFlipbook> BlueAttack(TEXT("/Game/Sprite/Knight/BlueA/FB_BlueA.FB_BlueA"));
     static ConstructorHelpers::FObjectFinder<UPaperFlipbook> YellowAttack(TEXT("/Game/Sprite/Knight/YellowA/FB_YellowA.FB_YellowA"));
     static ConstructorHelpers::FObjectFinder<UPaperFlipbook> PurpleAttack(TEXT("/Game/Sprite/Knight/PurpleA/FB_PurpleA.FB_PurpleA"));
+    static ConstructorHelpers::FObjectFinder<UPaperFlipbook> OrangeAttack(TEXT("/Game/Sprite/Knight/OrangeA/FB_OrangeA.FB_OrangeA"));
+    static ConstructorHelpers::FObjectFinder<UPaperFlipbook> GreenAttack(TEXT("/Game/Sprite/Knight/GreenA/FB_GreenA.FB_GreenA"));
 
     if (RedAttack.Succeeded()) AttackAnimations.Add("Red", RedAttack.Object);
     if (BlueAttack.Succeeded()) AttackAnimations.Add("Blue", BlueAttack.Object);
     if (YellowAttack.Succeeded()) AttackAnimations.Add("Yellow", YellowAttack.Object);
     if (PurpleAttack.Succeeded()) AttackAnimations.Add("Purple", PurpleAttack.Object);
+    if (OrangeAttack.Succeeded()) AttackAnimations.Add("Orange", OrangeAttack.Object);
+    if (GreenAttack.Succeeded()) AttackAnimations.Add("Green", GreenAttack.Object);
 }
 
 void APlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
-    if (IdleAnimation) FlipbookComponent->SetFlipbook(IdleAnimation);
+
+    if (IdleAnimation)
+        FlipbookComponent->SetFlipbook(IdleAnimation);
+
+    // Récupérer le GameMode et le HUD
+    AMainGameMode* GameMode = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode());
+    if (GameMode)
+    {
+        ComboHUDInstance = Cast<UWB_ComboHUD>(GameMode->GetComboHUD());
+        if (!ComboHUDInstance)
+        {
+            UE_LOG(LogTemp, Error, TEXT("ComboHUDInstance est nul après récupération depuis le GameMode."));
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Impossible de récupérer le GameMode !"));
+    }
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -43,10 +64,46 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 void APlayerCharacter::HandleComboInput(const FString& Input)
 {
+    if (!ComboHUDInstance) return;
+
+    static FString FirstInput;
+    static FString SecondInput;
+
+    if (!FirstInput.IsEmpty() && !SecondInput.IsEmpty())
+    {
+        ResetHUD();
+        FirstInput.Empty();
+        SecondInput.Empty();
+    }
+
+    if (FirstInput.IsEmpty())
+    {
+        FirstInput = Input;
+    }
+    else
+    {
+        SecondInput = Input;
+    }
+
+    // Mise à jour des couleurs
+    const FLinearColor FirstColor = GetColorFromInput(FirstInput);
+    const FLinearColor SecondColor = GetColorFromInput(SecondInput);
+    ComboHUDInstance->SetComboColors(FirstColor, SecondColor);
+
+    // Timer pour réinitialiser
+    GetWorldTimerManager().ClearTimer(ResetTimerHandle);
+    GetWorldTimerManager().SetTimer(ResetTimerHandle, this, &APlayerCharacter::ResetHUD, 2.0f, false);
+
+    // Gestion du buffer et des combos
+    ComboInputs[ComboIndex] = Input;
+    ComboIndex = (ComboIndex + 1) % MaxBufferSize;
+
     InputBuffer.Add(Input);
-    if (InputBuffer.Num() > 2) InputBuffer.RemoveAt(0);
+    if (InputBuffer.Num() > MaxBufferSize) InputBuffer.RemoveAt(0);
+
     CheckCombo();
 }
+
 
 void APlayerCharacter::CheckCombo()
 {
@@ -54,11 +111,13 @@ void APlayerCharacter::CheckCombo()
 
     FString Combo = InputBuffer[0] + InputBuffer[1];
     if (Combo == "UpRight" || Combo == "RightUp") PlayAttackAnimation("Purple");
-    else if (InputBuffer[0] == "Up") PlayAttackAnimation("Red");
-    else if (InputBuffer[0] == "Right") PlayAttackAnimation("Blue");
-    else if (InputBuffer[0] == "Left") PlayAttackAnimation("Yellow");
+    else if (Combo == "LeftRight" || Combo == "RightLeft") PlayAttackAnimation("Green");
+    else if (Combo == "UpLeft" || Combo == "LeftUp") PlayAttackAnimation("Orange");
+    else if (Combo == "UpUp") PlayAttackAnimation("Red");
+    else if (Combo == "RightRight") PlayAttackAnimation("Blue");
+    else if (Combo == "LeftLeft") PlayAttackAnimation("Yellow");
 
-    InputBuffer.Empty(); // Réinitialiser après un combo
+    InputBuffer.Empty(); // Réinitialise après un combo
 }
 
 void APlayerCharacter::PlayAttackAnimation(const FString& AttackName)
@@ -81,6 +140,22 @@ void APlayerCharacter::PlayAttackAnimation(const FString& AttackName)
 void APlayerCharacter::OnAnimationFinished()
 {
     if (IdleAnimation) FlipbookComponent->SetFlipbook(IdleAnimation);
+}
+
+FLinearColor APlayerCharacter::GetColorFromInput(const FString& Input) const
+{
+    if (Input == "Up") return FLinearColor::Red;
+    if (Input == "Right") return FLinearColor::Blue;
+    if (Input == "Left") return FLinearColor::Yellow;
+    return FLinearColor::Transparent; // Par défaut
+}
+
+void APlayerCharacter::ResetHUD()
+{
+    if (ComboHUDInstance)
+    {
+        ComboHUDInstance->ResetColors();
+    }
 }
 
 void APlayerCharacter::HandleUpInput() { HandleComboInput("Up"); }
