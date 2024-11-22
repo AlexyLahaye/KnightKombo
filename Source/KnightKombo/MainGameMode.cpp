@@ -1,12 +1,8 @@
 ﻿#include "MainGameMode.h"
-#include "CineCameraActor.h"
 #include "Blueprint/UserWidget.h"
+#include "CineCameraActor.h"
 #include "Kismet/GameplayStatics.h"
-#include "GameFramework/PlayerController.h"
-#include "GameFramework/Pawn.h"
-#include "UObject/ConstructorHelpers.h"
-#include "Knight/WB_ComboHUD.h"
-#include "Enemy/EnemyCharacter.h"
+#include "Enemy/EnemySpawner.h"
 
 AMainGameMode::AMainGameMode()
 {
@@ -16,23 +12,35 @@ AMainGameMode::AMainGameMode()
 	{
 		DefaultPawnClass = PlayerPawnBPClass.Class;
 		PlayerCharacterClass = PlayerPawnBPClass.Class;
-		UE_LOG(LogTemp, Log, TEXT("PlayerCharacter set successfully to BP_PlayerCharacter."));
+		UE_LOG(LogTemp, Log, TEXT("PlayerCharacterClass successfully set to BP_PlayerCharacter."));
 	}
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("Could not find BP_PlayerCharacter at the specified path."));
 	}
-	
-	// Charger la classe Blueprint pour le ComboHUD
-	static ConstructorHelpers::FClassFinder<UWB_ComboHUD> ComboHUD_BP(TEXT("/Game/Blueprints/WB_ComboHUD"));
+
+	// Charger la classe Blueprint pour le HUD Combo
+	static ConstructorHelpers::FClassFinder<UUserWidget> ComboHUD_BP(TEXT("/Game/Blueprints/WB_ComboHUD"));
 	if (ComboHUD_BP.Class != nullptr)
 	{
 		ComboHUDClass = ComboHUD_BP.Class;
-		UE_LOG(LogTemp, Log, TEXT("ComboHUDClass set successfully to WB_ComboHUD."));
+		UE_LOG(LogTemp, Log, TEXT("ComboHUDClass successfully set to WB_ComboHUD."));
 	}
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("Could not find WB_ComboHUD at the specified path."));
+	}
+
+	// Charger la classe Blueprint pour le spawner d'ennemis
+	static ConstructorHelpers::FClassFinder<AEnemySpawner> EnemySpawner_BP(TEXT("/Game/Blueprints/BP_EnemySpawner"));
+	if (EnemySpawner_BP.Class != nullptr)
+	{
+		EnemySpawnerClass = EnemySpawner_BP.Class;
+		UE_LOG(LogTemp, Log, TEXT("EnemySpawnerClass successfully set to BP_EnemySpawner."));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Could not find BP_EnemySpawner at the specified path."));
 	}
 	
 }
@@ -41,26 +49,30 @@ void AMainGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Configuration de la caméra
 	SetupPlayerCamera();
-	SetupPlayerCharacter();
 
+	// Création du HUD
 	if (ComboHUDClass)
 	{
-		ComboHUD = CreateWidget<UWB_ComboHUD>(GetWorld(), ComboHUDClass);
-		if (ComboHUD)
+		ComboHUDInstance = CreateWidget<UUserWidget>(GetWorld(), ComboHUDClass);
+		if (ComboHUDInstance)
 		{
-			ComboHUD->AddToViewport();
-			UE_LOG(LogTemp, Warning, TEXT("HUD créé avec succès !"));
+			ComboHUDInstance->AddToViewport();
+			UE_LOG(LogTemp, Warning, TEXT("HUD created successfully!"));
 		}
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT("Échec de création du HUD !"));
+			UE_LOG(LogTemp, Error, TEXT("Failed to create the HUD instance!"));
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("ComboHUDClass n'est pas défini !"));
+		UE_LOG(LogTemp, Error, TEXT("ComboHUDClass is not set!"));
 	}
+
+	// Lancement de la vague d'ennemis
+	StartEnemyWave();
 }
 
 void AMainGameMode::SetupPlayerCamera()
@@ -89,13 +101,36 @@ void AMainGameMode::SetupPlayerCamera()
 	}
 
 	PlayerController->SetViewTarget(MainCamera);
+	UE_LOG(LogTemp, Log, TEXT("Player camera successfully set to MainCamera."));
 }
 
-void AMainGameMode::SetupPlayerCharacter()
+void AMainGameMode::StartEnemyWave()
 {
-	// Cette fonction pourrait contenir d'autres configurations spécifiques au personnage
-	if (!DefaultPawnClass)
+	if (!EnemySpawnerClass)
 	{
-		UE_LOG(LogTemp, Error, TEXT("DefaultPawnClass is not set!"));
+		UE_LOG(LogTemp, Error, TEXT("EnemySpawnerClass is not set!"));
+		return;
+	}
+
+	// Recherche l'instance de spawner avec un tag spécifique
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("MainSpawner"), FoundActors);
+
+	if (FoundActors.Num() == 0)
+	{
+		UE_LOG(LogTemp, Error, TEXT("No actors with tag 'MainSpawner' found!"));
+		return;
+	}
+
+	EnemySpawnerInstance = Cast<AEnemySpawner>(FoundActors[0]);
+	if (EnemySpawnerInstance)
+	{
+		EnemySpawnerInstance->StartSpawning();
+		UE_LOG(LogTemp, Log, TEXT("EnemySpawner instance with tag 'MainSpawner' found and spawning started."));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to cast the found actor with tag 'MainSpawner' to AEnemySpawner."));
 	}
 }
+

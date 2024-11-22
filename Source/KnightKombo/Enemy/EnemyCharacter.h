@@ -12,13 +12,19 @@ class KNIGHTKOMBO_API AEnemyCharacter : public APaperCharacter
 public:
 	AEnemyCharacter();
 
+	// Déplace l'ennemi vers une position
+	void MoveToLocation(const FVector& TargetLocation);
+
+	// Gère les dégâts reçus
+	virtual float TakeDamage(
+		float DamageAmount,
+		struct FDamageEvent const& DamageEvent,
+		class AController* EventInstigator,
+		AActor* DamageCauser) override;
+
 protected:
 	virtual void BeginPlay() override;
 
-public:
-	// Propriétés ou méthodes spécifiques
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
 	float Health;
-
-	void TakeDamage(float DamageAmount);
 };

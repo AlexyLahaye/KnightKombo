@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "EnemyCharacter.h"
 #include "EnemySpawner.generated.h"
 
 UCLASS()
@@ -12,22 +13,32 @@ class KNIGHTKOMBO_API AEnemySpawner : public AActor
 public:
 	AEnemySpawner();
 
+	// Lance la vague d'ennemis
+	void StartSpawning();
+
 protected:
 	virtual void BeginPlay() override;
 
-public:
-	UFUNCTION(BlueprintCallable, Category = "Spawning")
-	void SpawnEnemyWave();
-
-	// Classe d'ennemi à faire apparaître
 	UPROPERTY(EditAnywhere, Category = "Spawning")
-	TSubclassOf<class AEnemyCharacter> EnemyClass;
+	TSubclassOf<AEnemyCharacter> EnemyCharacterClass;
 
-	// Position d'apparition
 	UPROPERTY(EditAnywhere, Category = "Spawning")
 	FVector SpawnPoint;
 
-	// Nombre d'ennemis par vague
+	UPROPERTY(EditAnywhere, Category = "Spawning")
+	FVector TargetPoint;
+
 	UPROPERTY(EditAnywhere, Category = "Spawning")
 	int32 EnemyCount;
+
+	UPROPERTY(EditAnywhere, Category = "Spawning")
+	float SpawnInterval;
+
+private:
+	// Liste des ennemis actifs
+	TArray<AEnemyCharacter*> ActiveEnemies;
+	
+	FTimerHandle SpawnTimerHandle;
+
+	void SpawnEnemy();
 };

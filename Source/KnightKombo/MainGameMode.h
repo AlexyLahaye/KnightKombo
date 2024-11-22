@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
+#include "Enemy/EnemySpawner.h"
 #include "MainGameMode.generated.h"
 
 UCLASS()
@@ -9,31 +10,42 @@ class KNIGHTKOMBO_API AMainGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
 
-protected:
-	// Référence au Widget ComboHUD créé
-	UPROPERTY(BlueprintReadOnly, Category = "HUD")
-	UUserWidget* ComboHUD;
-
 public:
-
 	AMainGameMode();
 
-	// Override BeginPlay
+	// Accès au HUD
+	UFUNCTION(BlueprintCallable, Category = "HUD")
+	UUserWidget* GetComboHUD() const { return ComboHUDInstance; }
+
+protected:
 	virtual void BeginPlay() override;
 
-
-	// Permet d'obtenir une référence au HUD
-	UUserWidget* GetComboHUD() const { return ComboHUD; }
-	
 private:
+	// Configurer la caméra pour suivre un acteur spécifique
 	void SetupPlayerCamera();
-	void SetupPlayerCharacter();
 
-	// Stocker le chemin du Blueprint du personnage
+	// Lancer la vague d'ennemis
+	void StartEnemyWave();
+
+	// Référence à la classe Blueprint du personnage joueur
 	UPROPERTY()
 	TSubclassOf<APawn> PlayerCharacterClass;
 
-	// Classe du Widget Blueprint du ComboHUD
+	// Référence au HUD Combo
 	UPROPERTY(EditAnywhere, Category = "HUD")
-	TSubclassOf<class UWB_ComboHUD> ComboHUDClass;
+	TSubclassOf<class UUserWidget> ComboHUDClass;
+
+	UPROPERTY()
+	UUserWidget* ComboHUDInstance;
+
+	// Référence à la classe Blueprint du spawner d'ennemis
+	UPROPERTY(EditAnywhere, Category = "Spawning")
+	TSubclassOf<AEnemySpawner> EnemySpawnerClass;
+
+	// Référence à la classe Blueprint du spawner d'ennemis
+	UPROPERTY(EditAnywhere, Category = "Enemy")
+	TSubclassOf<AEnemyCharacter> EnemyCharacterClass;
+
+	UPROPERTY()
+	AEnemySpawner* EnemySpawnerInstance;
 };
