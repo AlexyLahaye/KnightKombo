@@ -13,32 +13,45 @@ class KNIGHTKOMBO_API AEnemySpawner : public AActor
 public:
 	AEnemySpawner();
 
-	// Lance la vague d'ennemis
+	// Démarre le processus de spawn
 	void StartSpawning();
+
+	// Supprime un ennemi et nettoie ses positions assignées
+	void RemoveEnemy(AEnemyCharacter* Enemy);
 
 protected:
 	virtual void BeginPlay() override;
 
+	// Gère le spawn d'ennemis
+	void SpawnEnemy();
+
+	// Calcule une position valide pour un nouvel ennemi
+	FVector GetNextSpawnPosition(const FVector& BasePosition);
+
+private:
 	UPROPERTY(EditAnywhere, Category = "Spawning")
 	TSubclassOf<AEnemyCharacter> EnemyCharacterClass;
-
-	UPROPERTY(EditAnywhere, Category = "Spawning")
-	FVector SpawnPoint;
 
 	UPROPERTY(EditAnywhere, Category = "Spawning")
 	FVector TargetPoint;
 
 	UPROPERTY(EditAnywhere, Category = "Spawning")
-	int32 EnemyCount;
-
-	UPROPERTY(EditAnywhere, Category = "Spawning")
 	float SpawnInterval;
 
-private:
-	// Liste des ennemis actifs
+	UPROPERTY(EditAnywhere, Category = "Spawning")
+	int32 EnemyCount;
+
+	UPROPERTY() 
+	FVector SpawnPoint;
+
+	UPROPERTY()
 	TArray<AEnemyCharacter*> ActiveEnemies;
-	
+
 	FTimerHandle SpawnTimerHandle;
 
-	void SpawnEnemy();
+	// Distance minimale entre les ennemis
+	float MinDistanceBetweenEnemies = 150.0f;
+
+	// Liste des positions déjà assignées
+	TArray<FVector> AssignedPositions;
 };

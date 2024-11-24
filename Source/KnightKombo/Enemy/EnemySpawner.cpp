@@ -15,19 +15,16 @@ AEnemySpawner::AEnemySpawner()
 	}
 	
 	PrimaryActorTick.bCanEverTick = false;
-
-	TargetPoint = FVector(-1693, -1200, 1760);
-	SpawnInterval = 1.0f;
-	EnemyCount = 5;
+	
+	TargetPoint = FVector(-1730, -1200, 1760);
+	SpawnInterval = 3.0f;
+	EnemyCount = 20;
 }
 
 void AEnemySpawner::BeginPlay()
 {
 	Super::BeginPlay();
-	if (!EnemyCharacterClass)
-	{
-		UE_LOG(LogTemp, Error, TEXT("EnemyCharacterClass is null in BeginPlay! Check the setup."));
-	}
+	SpawnPoint = GetActorLocation();
 }
 
 void AEnemySpawner::StartSpawning()
@@ -54,6 +51,7 @@ void AEnemySpawner::SpawnEnemy()
 		UE_LOG(LogTemp, Error, TEXT("EnemyCharacterClass is not set! Cannot spawn enemy."));
 		return;
 	}
+	
 
 	// Spawne un ennemi
 	AEnemyCharacter* NewEnemy = GetWorld()->SpawnActor<AEnemyCharacter>(EnemyCharacterClass, SpawnPoint, FRotator::ZeroRotator);

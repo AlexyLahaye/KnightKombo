@@ -12,19 +12,39 @@ class KNIGHTKOMBO_API AEnemyCharacter : public APaperCharacter
 public:
 	AEnemyCharacter();
 
-	// Déplace l'ennemi vers une position
+	// Méthode pour déplacer l'ennemi vers une cible
 	void MoveToLocation(const FVector& TargetLocation);
-
-	// Gère les dégâts reçus
-	virtual float TakeDamage(
-		float DamageAmount,
-		struct FDamageEvent const& DamageEvent,
-		class AController* EventInstigator,
-		AActor* DamageCauser) override;
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
-	float Health;
+private:
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	float MoveSpeed;
+	
+	// Flipbook pour les animations
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	class UPaperFlipbookComponent* FlipbookComponent;
+
+	UPROPERTY(EditAnywhere, Category = "Animations")
+	class UPaperFlipbook* IdleAnimation;
+
+	UPROPERTY(EditAnywhere, Category = "Animations")
+	class UPaperFlipbook* WalkAnimation;
+
+	UPROPERTY(EditAnywhere, Category = "Animations")
+	class UPaperFlipbook* AttackAnimation;
+	
+	UPROPERTY(EditAnywhere, Category = "Animations")
+	class UPaperFlipbook* DeathAnimation;
+
+	// Changer l'animation actuelle
+	void SetAnimation(UPaperFlipbook* NewAnimation);
+
+	UPROPERTY(EditAnywhere, Category = "Appearance")
+	TArray<FLinearColor> EnemyColors;
+
+	// Fonction pour définir une couleur aléatoire
+	void SetRandomColor();
 };
