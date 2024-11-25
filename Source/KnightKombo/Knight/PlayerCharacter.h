@@ -11,53 +11,53 @@ class KNIGHTKOMBO_API APlayerCharacter : public APaperCharacter
 	GENERATED_BODY()
 
 public:
-	virtual void BeginPlay() override;
-	
 	APlayerCharacter();
 
+	virtual void BeginPlay() override;
+
+	// Gère les entrées des combos
 	void HandleComboInput(const FString& Input);
 
 protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
-	
-	UPROPERTY()
-	UUserWidget* ComboHUD;
-
-	// Référence au ComboHUD spécifique
-	UPROPERTY()
-	UWB_ComboHUD* ComboHUDInstance;
 
 private:
-	// Animations
+	// Composants visuels
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	class UPaperFlipbookComponent* FlipbookComponent;
 
+	// Animations
 	UPROPERTY(EditAnywhere, Category = "Animations")
 	class UPaperFlipbook* IdleAnimation;
 
 	UPROPERTY(EditAnywhere, Category = "Animations")
 	TMap<FString, UPaperFlipbook*> AttackAnimations;
 
-	// Combos
+	// Gestion des combos
 	TArray<FString> InputBuffer;
-	FString ComboInputs[2]; // Stocke les deux dernières touches pressées
+	FString ComboInputs[2];
 	int32 ComboIndex = 0;
 	const int32 MaxBufferSize = 2;
 
-	// Gestion de l'update de l'HUD
+	// Couleur de l'attaque actuelle
+	FString CurrentAttackColor;
+
+	// HUD
 	UPROPERTY(EditAnywhere, Category = "UI")
 	TSubclassOf<class UUserWidget> ComboHUDClass;
-	
-	// Timer pour réinitialiser le HUD
+
+	UPROPERTY()
+	UWB_ComboHUD* ComboHUDInstance;
+
 	FTimerHandle ResetTimerHandle;
 
-	// Convertit une chaîne en couleur
+	// Collision pour les attaques
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attack", meta = (AllowPrivateAccess = "true"))
+	class UBoxComponent* HitBox;
+
+	// Méthodes auxiliaires
 	FLinearColor GetColorFromInput(const FString& Input) const;
-
-	// Réinitialise le HUD
 	void ResetHUD();
-
-	// Gestion des entrées et animations
 	void HandleUpInput();
 	void HandleDownInput();
 	void HandleRightInput();
@@ -65,4 +65,8 @@ private:
 	void CheckCombo();
 	void PlayAttackAnimation(const FString& AttackName);
 	void OnAnimationFinished();
+	void HandleDamageToEnemies(); // Gestion de l'attaque.
+
+	// Changer l'animation actuelle
+	void SetAnimation(UPaperFlipbook* NewAnimation);
 };
