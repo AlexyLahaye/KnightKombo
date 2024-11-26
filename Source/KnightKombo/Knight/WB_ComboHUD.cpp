@@ -22,3 +22,19 @@ void UWB_ComboHUD::ResetColors()
 {
 	SetComboColors(FLinearColor::Transparent, FLinearColor::Transparent);
 }
+
+void UWB_ComboHUD::UpdateScore()
+{
+	if (!ScoreTxt) // Vérifiez que le TextBlock est valide
+	{
+		return;
+	}
+
+	// Incrémenter le score
+	CurrentScore++;
+
+	// Mettre à jour le texte du TextBlock
+	FText NewText = FText::AsNumber(CurrentScore);
+	ScoreTxt->SetText(NewText);
+}
+
