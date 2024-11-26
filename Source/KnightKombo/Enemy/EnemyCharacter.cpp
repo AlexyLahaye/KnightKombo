@@ -165,11 +165,11 @@ void AEnemyCharacter::HandleDamage(FString CurrentAttackColor)
 		// Détruire l'ennemi après la durée de l'animation
 		FTimerHandle DestroyTimerHandle;
 		GetWorld()->GetTimerManager().SetTimer(DestroyTimerHandle, this, &AEnemyCharacter::DestroyEnemy, DeathAnimationDuration, false);
+		
 	}
 }
 
 void AEnemyCharacter::DestroyEnemy()
 {
-	
 	Destroy();
 }

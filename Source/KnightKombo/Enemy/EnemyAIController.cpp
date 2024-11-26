@@ -73,7 +73,7 @@ void AEnemyAIController::StartAttackCycle()
             UE_LOG(LogTemp, Warning, TEXT("Controlled enemy no longer exists, stopping attack cycle."));
             StopAttackCycle(); // Arrête le timer si l'ennemi n'existe plus
         }
-    }, 1.0f, true); // Répéter toutes les 1 seconde
+    }, 1.5f, true); // Répéter toutes les 1 seconde
 }
 
 
