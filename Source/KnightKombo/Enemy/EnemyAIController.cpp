@@ -10,6 +10,22 @@ AEnemyAIController::AEnemyAIController()
 {
 }
 
+void AEnemyAIController::OnUnPossess()
+{
+    Super::OnUnPossess();
+
+    // Nettoie les timers lorsque le contrôleur perd son pawn
+    StopAttackCycle();
+}
+
+void AEnemyAIController::BeginDestroy()
+{
+    Super::BeginDestroy();
+
+    // Nettoie les timers lors de la destruction du contrôleur
+    StopAttackCycle();
+}
+
 void AEnemyAIController::BeginPlay()
 {
     Super::BeginPlay();
@@ -49,6 +65,12 @@ void AEnemyAIController::HandleMoveCompleted(FAIRequestID RequestID, const FPath
 
 void AEnemyAIController::StartAttackCycle()
 {
+    if (!GetPawn())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("AIController has no pawn to control. Stopping attack cycle."));
+        StopAttackCycle();
+        return;
+    }
     AEnemyCharacter* ControlledEnemy = Cast<AEnemyCharacter>(GetPawn());
     if (!ControlledEnemy)
     {
@@ -73,13 +95,18 @@ void AEnemyAIController::StartAttackCycle()
             UE_LOG(LogTemp, Warning, TEXT("Controlled enemy no longer exists, stopping attack cycle."));
             StopAttackCycle(); // Arrête le timer si l'ennemi n'existe plus
         }
-    }, 1.5f, true); // Répéter toutes les 1 seconde
+    }, 2.0f, true); // Répéter toutes les 2 secondes
 }
 
 
 
 void AEnemyAIController::StopAttackCycle()
 {
-    // Arrêter le timer
-    GetWorld()->GetTimerManager().ClearTimer(AttackTimerHandle);
+    if (AttackTimerHandle.IsValid())
+    {
+        GetWorld()->GetTimerManager().ClearTimer(AttackTimerHandle);
+        UE_LOG(LogTemp, Log, TEXT("Attack cycle stopped and timer cleared."));
+    }
 }
+
+

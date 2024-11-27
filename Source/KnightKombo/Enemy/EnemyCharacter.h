@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "PaperCharacter.h"
+#include "KnightKombo/Knight/WB_ComboHUD.h"
 #include "EnemyCharacter.generated.h"
 
 UCLASS()
@@ -30,6 +31,10 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
+
+	// Référence au HUD du joueur
+	UPROPERTY()
+	UWB_ComboHUD* ComboHUDInstance;
 
 private:
 	// Indique si l'ennemi est en train d'attaquer

@@ -22,6 +22,16 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* ScoreTxt;
 
+	// Références aux cœurs
+	UPROPERTY(meta = (BindWidget))
+	UImage* Heart1;
+
+	UPROPERTY(meta = (BindWidget))
+	UImage* Heart2;
+
+	UPROPERTY(meta = (BindWidget))
+	UImage* Heart3;
+
 	int32 CurrentScore = 0;
 
 public:
@@ -32,4 +42,7 @@ public:
 	void ResetColors();
 
 	void UpdateScore();
+
+	// Met à jour l'affichage des vies
+	void UpdateLife(int32 CurrentLives);
 };

@@ -3,6 +3,9 @@
 #include "PaperFlipbookComponent.h"
 #include "PaperFlipbook.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "KnightKombo/MainGameMode.h"
+#include "KnightKombo/Knight/PlayerCharacter.h"
 
 AEnemyCharacter::AEnemyCharacter()
 {
@@ -47,6 +50,21 @@ void AEnemyCharacter::BeginPlay()
 	
 	// Assigner une couleur aléatoire
 	SetRandomColor();
+
+	// Récupérer l'instance du joueur
+	APlayerCharacter* Player = Cast<APlayerCharacter>(GetWorld()->GetFirstPlayerController()->GetPawn());
+	if (Player)
+	{
+		ComboHUDInstance = Player->ComboHUDInstance;
+		if (!ComboHUDInstance)
+		{
+			UE_LOG(LogTemp, Error, TEXT("EnemyCharacter: Impossible de récupérer ComboHUDInstance depuis PlayerCharacter."));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("EnemyCharacter: Impossible de récupérer le PlayerCharacter."));
+	}
 }
 
 void AEnemyCharacter::Tick(float DeltaTime)
@@ -113,9 +131,9 @@ void AEnemyCharacter::SetRandomColor()
 
 void AEnemyCharacter::PerformAttack()
 {
-	if (IsDying) // Si l'ennemi est mourant, il ne peut pas attaquer
+	if (IsDying || bIsAttacking) // Si l'ennemi est mourant ou attaque déjà, ne rien faire
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Enemy is dying."));
+		UE_LOG(LogTemp, Warning, TEXT("Enemy is dying ou attaque déjà."));
 		return;
 	}
 
@@ -126,17 +144,47 @@ void AEnemyCharacter::PerformAttack()
 		SetAnimation(AttackAnimation);
 		UE_LOG(LogTemp, Log, TEXT("Enemy is attacking!"));
 
-		// Ajouter un timer pour réinitialiser bIsAttacking après la durée de l'animation
-		float AttackAnimationDuration = AttackAnimation->GetTotalDuration();
+		// *** Jouer le son d'attaque ***
+		USoundBase* AttackSound = Cast<USoundBase>(StaticLoadObject(
+			USoundWave::StaticClass(),
+			nullptr,
+			TEXT("/Game/Sound/Sword_Slash-Sound_Effect_HD")
+		));
+
+		if (AttackSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, AttackSound, GetActorLocation());
+			UE_LOG(LogTemp, Log, TEXT("Attack sound played."));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Failed to load attack sound!"));
+		}
+
+		// Ajouter un timer unique pour gérer à la fois la réinitialisation et la réduction des vies
+		float AttackAnimationDuration = AttackAnimation->GetTotalDuration() - 0.1f;
+
 		GetWorld()->GetTimerManager().SetTimer(
-			AttackResetTimerHandle, // Handle du timer
-			this,                   // Objet propriétaire de la méthode
-			&AEnemyCharacter::ResetAttackState, // Méthode à appeler
-			AttackAnimationDuration, // Durée du délai
-			false                    // Pas de répétition
+			AttackResetTimerHandle,
+			[this]()
+			{
+				// Réinitialiser l'état d'attaque
+				ResetAttackState();
+
+				// Réduire les vies du joueur
+				AMainGameMode* GameMode = Cast<AMainGameMode>(GetWorld()->GetAuthGameMode());
+				if (GameMode && !IsDying)
+				{
+					GameMode->DecreasePlayerLives();
+				}
+			},
+			AttackAnimationDuration,
+			false // Pas de répétition
 		);
 	}
 }
+
+
 
 void AEnemyCharacter::ResetAttackState()
 {
@@ -162,10 +210,31 @@ void AEnemyCharacter::HandleDamage(FString CurrentAttackColor)
 			AIController->StopAttackCycle();
 		}
 
+		// Mettre à jour le score via le HUD
+		if (ComboHUDInstance)
+		{
+			ComboHUDInstance->UpdateScore();
+		}
+
+		// *** Jouer le son d'attaque ***
+		USoundBase* AttackSound = Cast<USoundBase>(StaticLoadObject(
+			USoundWave::StaticClass(),
+			nullptr,
+			TEXT("/Game/Sound/Zombie_Death__Minecraft__-_Sound_Effect_HD")
+		));
+
+		if (AttackSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, AttackSound, GetActorLocation());
+			UE_LOG(LogTemp, Log, TEXT("Attack sound played."));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Failed to load attack sound!"));
+		}
 		// Détruire l'ennemi après la durée de l'animation
 		FTimerHandle DestroyTimerHandle;
 		GetWorld()->GetTimerManager().SetTimer(DestroyTimerHandle, this, &AEnemyCharacter::DestroyEnemy, DeathAnimationDuration, false);
-		
 	}
 }
 

@@ -25,6 +25,10 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	virtual void BeginDestroy() override;
+
+	virtual void OnUnPossess() override;
+
 public:
 	
 	// Déplace l'ennemi vers une cible spécifique

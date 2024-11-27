@@ -3,6 +3,7 @@
 #include "CineCameraActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "Enemy/EnemySpawner.h"
+#include "HUD/GameOverHUD.h"
 
 AMainGameMode::AMainGameMode()
 {
@@ -41,6 +42,23 @@ AMainGameMode::AMainGameMode()
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("Could not find BP_EnemySpawner at the specified path."));
+	}
+
+	static ConstructorHelpers::FClassFinder<UGameOverHUD> GameOverHUDObj(TEXT("/Game/Blueprints/WB_GameOverHUD")); 
+	if (GameOverHUDObj.Succeeded())
+	{
+		GameOverHUDClass = GameOverHUDObj.Class;
+	}
+
+	static ConstructorHelpers::FClassFinder<UUserWidget> PauseMenuHUD_BP(TEXT("/Game/Blueprints/WB_PauseMenuHUD"));
+	if (PauseMenuHUD_BP.Class != nullptr)
+	{
+		PauseMenuHUDClass = PauseMenuHUD_BP.Class;
+		UE_LOG(LogTemp, Log, TEXT("PauseMenuHUDClass successfully set to WB_PauseMenuHUD."));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Could not find WB_PauseMenuHUD at the specified path."));
 	}
 	
 }
@@ -133,4 +151,83 @@ void AMainGameMode::StartEnemyWave()
 		UE_LOG(LogTemp, Error, TEXT("Failed to cast the found actor with tag 'MainSpawner' to AEnemySpawner."));
 	}
 }
+
+void AMainGameMode::DecreasePlayerLives()
+{
+	if (PlayerLives > 0)
+	{
+		PlayerLives--;
+
+		// Mettre à jour le HUD après avoir réduit les vies
+		UWB_ComboHUD* HUD = Cast<UWB_ComboHUD>(GetComboHUD());
+		if (HUD)
+		{
+			HUD->UpdateLife(PlayerLives);
+		}
+
+		// Si les vies atteignent zéro, gérer la défaite ici (à développer si nécessaire)
+		if (PlayerLives <= 0)
+		{
+			CheckGameOver();
+		}
+	}
+}
+
+void AMainGameMode::CheckGameOver()
+{
+	if (PlayerLives <= 0)
+	{
+		// Affiche le Game Over HUD
+		if (GameOverHUDClass) // Vérifie si une classe de HUD est définie
+		{
+			UGameOverHUD* GameOverHUD = CreateWidget<UGameOverHUD>(GetWorld(), GameOverHUDClass);
+			if (GameOverHUD)
+			{
+				GameOverHUD->AddToViewport();
+				UE_LOG(LogTemp, Log, TEXT("Game Over HUD added to viewport."));
+			}
+		}
+
+		// Active la souris pour permettre l'interaction avec les boutons
+		APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+		if (PlayerController)
+		{
+			PlayerController->bShowMouseCursor = true;  // Afficher le curseur
+			PlayerController->SetInputMode(FInputModeUIOnly());  // Passer en mode interface utilisateur (UI)
+		}
+
+		// Pause le jeu après avoir ajouté l'HUD
+		UGameplayStatics::SetGamePaused(GetWorld(), true);
+	}
+}
+
+void AMainGameMode::TogglePauseMenu()
+{
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	if (!PlayerController)
+	{
+		UE_LOG(LogTemp, Error, TEXT("PlayerController not found!"));
+		return;
+	}
+	// Affiche le PauseMenuHUD
+	if (PauseMenuHUDClass)
+	{
+		PauseMenuHUDInstance = CreateWidget<UUserWidget>(GetWorld(), PauseMenuHUDClass);
+		if (PauseMenuHUDInstance)
+		{
+			PauseMenuHUDInstance->AddToViewport();
+		}
+	}
+
+	// Met le jeu en pause
+	UGameplayStatics::SetGamePaused(GetWorld(), true);
+	PlayerController->bShowMouseCursor = true;  // Afficher le curseur
+	PlayerController->SetInputMode(FInputModeUIOnly());  // Mode interface utilisateur
+	
+	UE_LOG(LogTemp, Log, TEXT("Game paused and PauseMenuHUD displayed."));
+	
+}
+
+
+
 
