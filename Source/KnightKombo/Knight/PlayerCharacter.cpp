@@ -1,9 +1,12 @@
 ﻿#include "PlayerCharacter.h"
+
+#include "AITestsCommon.h"
 #include "PaperFlipbookComponent.h"
 #include "PaperFlipbook.h"
 #include "Components/BoxComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "TimerManager.h"
+#include "Kismet/GameplayStatics.h"
 #include "KnightKombo/MainGameMode.h"
 
 APlayerCharacter::APlayerCharacter()
@@ -65,17 +68,25 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	PlayerInputComponent->BindAction("UpAttack", IE_Pressed, this, &APlayerCharacter::HandleUpInput);
-	PlayerInputComponent->BindAction("DownAttack", IE_Pressed, this, &APlayerCharacter::HandleDownInput);
+	//PlayerInputComponent->BindAction("DownAttack", IE_Pressed, this, &APlayerCharacter::HandleDownInput);
 	PlayerInputComponent->BindAction("RightAttack", IE_Pressed, this, &APlayerCharacter::HandleRightInput);
 	PlayerInputComponent->BindAction("LeftAttack", IE_Pressed, this, &APlayerCharacter::HandleLeftInput);
+	// Liaison de la touche Échap pour basculer le menu pause
+	InputComponent->BindAction("Pause", IE_Pressed, this, &APlayerCharacter::HandlePausePressed);
+}
+
+void APlayerCharacter::HandlePausePressed()
+{
+	AMainGameMode* GameMode = Cast<AMainGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (GameMode)
+	{
+		GameMode->TogglePauseMenu();
+	}
 }
 
 void APlayerCharacter::HandleComboInput(const FString& Input)
 {
 	if (!ComboHUDInstance) return;
-
-	static FString FirstInput;
-	static FString SecondInput;
 
 	if (!FirstInput.IsEmpty() && !SecondInput.IsEmpty())
 	{
@@ -88,19 +99,19 @@ void APlayerCharacter::HandleComboInput(const FString& Input)
 	{
 		FirstInput = Input;
 	}
-	else
+	else if (SecondInput.IsEmpty())
 	{
 		SecondInput = Input;
 	}
 
+	// Timer pour réinitialiser
+	GetWorldTimerManager().ClearTimer(ResetTimerHandle);
+	GetWorldTimerManager().SetTimer(ResetTimerHandle, this, &APlayerCharacter::ResetHUD, 2.0f, false);
+	
 	// Mise à jour des couleurs
 	const FLinearColor FirstColor = GetColorFromInput(FirstInput);
 	const FLinearColor SecondColor = GetColorFromInput(SecondInput);
 	ComboHUDInstance->SetComboColors(FirstColor, SecondColor);
-
-	// Timer pour réinitialiser
-	GetWorldTimerManager().ClearTimer(ResetTimerHandle);
-	GetWorldTimerManager().SetTimer(ResetTimerHandle, this, &APlayerCharacter::ResetHUD, 2.0f, false);
 
 	// Gestion du buffer et des combos
 	ComboInputs[ComboIndex] = Input;
@@ -117,14 +128,34 @@ void APlayerCharacter::CheckCombo()
 	if (InputBuffer.Num() < 2) return;
 
 	FString Combo = InputBuffer[0] + InputBuffer[1];
-	if (Combo == "UpRight" || Combo == "RightUp") { CurrentAttackColor = "violet"; PlayAttackAnimation("Purple"); }
-	else if (Combo == "LeftRight" || Combo == "RightLeft") {  CurrentAttackColor = "vert"; PlayAttackAnimation("Green"); }
-	else if (Combo == "UpLeft" || Combo == "LeftUp") { CurrentAttackColor = "orange"; PlayAttackAnimation("Orange"); }
-	else if (Combo == "UpUp") { CurrentAttackColor = "rouge"; PlayAttackAnimation("Red"); }
-	else if (Combo == "RightRight") { CurrentAttackColor = "bleu"; PlayAttackAnimation("Blue"); }
-	else if (Combo == "LeftLeft") { CurrentAttackColor = "jaune"; PlayAttackAnimation("Yellow"); }
+	if (Combo == "UpRight" || Combo == "RightUp") { CurrentAttackColor = "violet"; PlaySound(); PlayAttackAnimation("Purple"); }
+	else if (Combo == "LeftRight" || Combo == "RightLeft") {  CurrentAttackColor = "vert"; PlaySound(); PlayAttackAnimation("Green"); }
+	else if (Combo == "UpLeft" || Combo == "LeftUp") { CurrentAttackColor = "orange"; PlaySound(); PlayAttackAnimation("Orange"); }
+	else if (Combo == "UpUp") { CurrentAttackColor = "rouge"; PlaySound(); PlayAttackAnimation("Red"); }
+	else if (Combo == "RightRight") { CurrentAttackColor = "bleu"; PlaySound(); PlayAttackAnimation("Blue"); }
+	else if (Combo == "LeftLeft") { CurrentAttackColor = "jaune"; PlaySound(); PlayAttackAnimation("Yellow"); }
 
 	InputBuffer.Empty(); // Réinitialise après un combo
+}
+
+void APlayerCharacter::PlaySound()
+{
+	// *** Jouer le son d'attaque ***
+	USoundBase* AttackSound = Cast<USoundBase>(StaticLoadObject(
+		USoundWave::StaticClass(),
+		nullptr,
+		TEXT("/Game/Sound/Katana_Swing_Cut_-_Sound_Effect_for_editing")
+	));
+
+	if (AttackSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, AttackSound, GetActorLocation());
+		UE_LOG(LogTemp, Log, TEXT("Attack sound played."));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to load attack sound!"));
+	}
 }
 
 void APlayerCharacter::PlayAttackAnimation(const FString& AttackName)
@@ -162,12 +193,20 @@ void APlayerCharacter::ResetHUD()
 {
 	if (ComboHUDInstance)
 	{
-		ComboHUDInstance->ResetColors();
+		ComboHUDInstance->SetComboColors(FLinearColor::Transparent, FLinearColor::Transparent);
 	}
+
+	// Réinitialiser les couleurs et les inputs
+	InputBuffer.Empty();      // Vide le buffer des inputs
+	ComboIndex = 0;           // Réinitialise l'index des combos
+
+	// Réinitialise les inputs membres
+	FirstInput.Empty();
+	SecondInput.Empty();
 }
 
 void APlayerCharacter::HandleUpInput() { HandleComboInput("Up"); }
-void APlayerCharacter::HandleDownInput() { HandleComboInput("Down"); }
+//void APlayerCharacter::HandleDownInput() { HandleComboInput("Down"); }
 void APlayerCharacter::HandleRightInput() { HandleComboInput("Right"); }
 void APlayerCharacter::HandleLeftInput() { HandleComboInput("Left"); }
 

@@ -18,6 +18,11 @@ public:
 	// Gère les entrées des combos
 	void HandleComboInput(const FString& Input);
 
+	UPROPERTY()
+	UWB_ComboHUD* ComboHUDInstance;
+
+	void HandlePausePressed();
+
 protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
@@ -30,6 +35,8 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Animations")
 	class UPaperFlipbook* IdleAnimation;
 
+	void PlaySound();
+
 	UPROPERTY(EditAnywhere, Category = "Animations")
 	TMap<FString, UPaperFlipbook*> AttackAnimations;
 
@@ -41,13 +48,12 @@ private:
 
 	// Couleur de l'attaque actuelle
 	FString CurrentAttackColor;
+	FString FirstInput;
+	FString SecondInput;
 
 	// HUD
 	UPROPERTY(EditAnywhere, Category = "UI")
 	TSubclassOf<class UUserWidget> ComboHUDClass;
-
-	UPROPERTY()
-	UWB_ComboHUD* ComboHUDInstance;
 
 	FTimerHandle ResetTimerHandle;
 
