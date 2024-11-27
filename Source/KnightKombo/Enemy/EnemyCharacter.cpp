@@ -1,7 +1,9 @@
-﻿#include "EnemyCharacter.h"
+#include "EnemyCharacter.h"
 #include "EnemyAIController.h"
 #include "PaperFlipbookComponent.h"
 #include "PaperFlipbook.h"
+#include "../Knight/WB_ComboHUD.h"
+#include "GameFramework/HUD.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "KnightKombo/MainGameMode.h"
@@ -197,6 +199,7 @@ void AEnemyCharacter::HandleDamage(FString CurrentAttackColor)
 	if (CurrentAttackColor == RandomColorName)
 	{
 		IsDying = true;
+
 		// Jouer l'animation de mort
 		SetAnimation(DeathAnimation);
 
@@ -237,6 +240,8 @@ void AEnemyCharacter::HandleDamage(FString CurrentAttackColor)
 		GetWorld()->GetTimerManager().SetTimer(DestroyTimerHandle, this, &AEnemyCharacter::DestroyEnemy, DeathAnimationDuration, false);
 	}
 }
+
+
 
 void AEnemyCharacter::DestroyEnemy()
 {
